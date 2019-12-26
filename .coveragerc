@@ -1,0 +1,6 @@
+[report]
+include =
+    src/iadelib/*
+omit =
+    */test*
+    */upgrades/*
