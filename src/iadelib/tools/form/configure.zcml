@@ -10,7 +10,7 @@
       name="import_users"
       class=".import_users_form.FileCSVForm"
       for="*"
-      permission="zope2.View"/>
+      permission="cmf.ManagePortal"/>
 
 
 </configure>

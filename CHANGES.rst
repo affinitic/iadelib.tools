@@ -5,7 +5,8 @@ Changelog
 1.0a3 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Fix permission
+  [vpiret]
 
 
 1.0a2 (2020-01-08)
