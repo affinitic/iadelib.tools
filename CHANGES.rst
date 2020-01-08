@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0a2 (unreleased)
+1.0a2 (2020-01-08)
 ------------------
 
 - Add form view for import users
