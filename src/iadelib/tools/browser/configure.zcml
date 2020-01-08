@@ -18,11 +18,4 @@
       directory="static"
       />
 
-  <browser:page
-      name="import_users"
-      class=".import_users.ImportUsers"
-      for="*"
-      attribute="import_user_from_csv"
-      permission="zope2.View"/>
-
 </configure>

@@ -5,7 +5,8 @@ Changelog
 1.0a2 (unreleased)
 ------------------
 
-- Nothing changed yet.
+- Add form view for import users
+  [vpiret]
 
 
 1.0a1 (2020-01-07)

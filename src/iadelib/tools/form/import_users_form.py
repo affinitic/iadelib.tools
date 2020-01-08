@@ -1,18 +1,51 @@
 # -*- coding: utf-8 -*-
+from plone.namedfile.field import NamedBlobFile
+from plone.supermodel import model
+from z3c.form.form import Form
+from zope.interface import implements
+from z3c.form.field import Fields
+from z3c.form.interfaces import IFieldsForm
+from z3c.form import button
 from AccessControl import Unauthorized
 from plone import api
 import csv
 from Products.CMFPlone.utils import normalizeString
 from Products.CMFCore.exceptions import BadRequest
 from Products.CMFPlone.utils import safe_unicode
-from Products.Five import BrowserView
 from Products.CMFCore.utils import getToolByName
 
 PLONEGROUP_ORG = 'plonegroup-organization'
 DEFAULT_DIRECTORY_ID = 'contacts'
 
+class IFileCSV(model.Schema):
+    filecsv = NamedBlobFile(title=u"File", required=True)
 
-class ImportUsers(BrowserView):
+
+class FileCSVForm(Form):
+
+    label = u"Import users from csv"
+    implements(IFieldsForm)
+    fields = Fields(IFileCSV).select("filecsv")
+
+    ignoreContext = True
+
+    def org_id_to_uid(self, org_info, raise_on_error=True):
+        """Returns the corresponding org based value for given org_info based value.
+           'developers', will return 'orguid'.
+           'developers_creators' will return 'orguid_creators'."""
+        own_org = self.get_own_organization()
+        try:
+            if '_' in org_info:
+                org_path, suffix = org_info.split('_')
+                org = own_org.restrictedTraverse(org_path.encode('utf-8'))
+                return self.get_plone_group_id(org.UID(), suffix)
+            else:
+                org = own_org.restrictedTraverse(org_info.encode('utf-8'))
+                return org.UID()
+        except Exception, exc:
+            if raise_on_error:
+                return None
+
 
     def get_plone_group_id(self, prefix, suffix):
         """
@@ -37,37 +70,12 @@ class ImportUsers(BrowserView):
             if brains:
                 return brains[0].getObject()
 
-    def org_id_to_uid(self, org_info, raise_on_error=True):
-        """Returns the corresponding org based value for given org_info based value.
-           'developers', will return 'orguid'.
-           'developers_creators' will return 'orguid_creators'."""
-        own_org = self.get_own_organization()
-        try:
-            if '_' in org_info:
-                org_path, suffix = org_info.split('_')
-                org = own_org.restrictedTraverse(org_path.encode('utf-8'))
-                return self.get_plone_group_id(org.UID(), suffix)
-            else:
-                org = own_org.restrictedTraverse(org_info.encode('utf-8'))
-                return org.UID()
-        except Exception, exc:
-            if raise_on_error:
-                return None
-
-    def import_user_from_csv(self, fname=None):
-        """
-          Import the users and attribute roles from the 'csv file' (fname received as parameter)
-        """
-
+    def send_request(self, data):
         member = api.user.get_current()
         if not member.has_role('Manager'):
             raise Unauthorized('You must be a Manager to access this script !')
-
-        if not fname:
-            return "This script needs a 'fname' parameter"
-
         try:
-            file = open(fname, "rb")
+            file = data['filecsv'].open()
             reader = csv.DictReader(file)
         except Exception, msg:
             file.close()
@@ -83,17 +91,14 @@ class ImportUsers(BrowserView):
             row_id = normalizeString(row['username'], self)
             # add users if not exist
             if row_id not in [ud['userid'] for ud in acl.searchUsers()]:
-                try:
-                    pms.addMember(row_id, row['password'], ('Member',), [])
-                    member = pms.getMemberById(row_id)
-                    properties = {'fullname': row['fullname'], 'email': row['email']}
-                    failMessage = registration.testPropertiesValidity(properties, member)
-                    if failMessage is not None:
-                        raise BadRequest(failMessage)
-                    member.setMemberProperties(properties)
-                    out.append("User '%s' is added" % row_id)
-                except:
-                    import pdb;pdb.set_trace()
+                pms.addMember(row_id, row['password'], ('Member',), [])
+                member = pms.getMemberById(row_id)
+                properties = {'fullname': row['fullname'], 'email': row['email']}
+                failMessage = registration.testPropertiesValidity(properties, member)
+                if failMessage is not None:
+                    raise BadRequest(failMessage)
+                member.setMemberProperties(properties)
+                out.append("User '%s' is added" % row_id)
             else:
                 out.append("User %s already exists" % row_id)
             # attribute roles
@@ -121,7 +126,15 @@ class ImportUsers(BrowserView):
                 pgr.addPrincipalToGroup(row_id, plone_group_id)
                 out.append("    -> Added in group '%s'" % plone_group_id)
 
-
         file.close()
-
+        self.request.response.redirect(api.portal.get().absolute_url())
         return '\n'.join(out)
+
+    @button.buttonAndHandler(u"Send", name="send")
+    def handleApply(self, action):
+        data, errors = self.extractData()
+        if errors:
+            self.status = self.formErrorsMessage
+            return
+
+        self.send_request(data)

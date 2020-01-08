@@ -1,0 +1,16 @@
+<configure
+  xmlns="http://namespaces.zope.org/zope"
+  xmlns:plone="http://namespaces.plone.org/plone"
+  xmlns:browser="http://namespaces.zope.org/browser"
+  xmlns:z3c="http://namespaces.zope.org/z3c"
+  xmlns:i18n="http://namespaces.zope.org/i18n"
+  i18n_domain="iadelib.tools">
+
+   <browser:page
+      name="import_users"
+      class=".import_users_form.FileCSVForm"
+      for="*"
+      permission="zope2.View"/>
+
+
+</configure>
